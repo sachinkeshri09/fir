@@ -1,0 +1,57 @@
+/* fir_detail.css */
+
+/* 1. ON-SCREEN STYLING (So it looks like a letter before you print) */
+.formal-letter {
+    font-family: 'Times New Roman', Times, serif;
+    line-height: 1.6;
+    color: #000;
+    border: 1px solid #dee2e6;
+}
+
+.fir-detail-content {
+    max-width: 800px;
+}
+
+.fir-detail-body {
+    white-space: pre-wrap;
+    font-size: 15px;
+}
+
+/* 2. EXACT A4 PRINT STYLING */
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+    }
+
+    body {
+        background-color: white !important;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    #fir-content,
+    #fir-content * {
+        visibility: visible;
+    }
+
+    #fir-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        /* Legal document padding with 4cm left binding margin */
+        padding: 2.54cm 2.54cm 2.54cm 4cm;
+        box-sizing: border-box;
+        box-shadow: none !important;
+        border: none !important;
+        background-color: white !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}

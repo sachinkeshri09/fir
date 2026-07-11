@@ -1,0 +1,25 @@
+FIRST INFORMATION REPORT
+
+Police Station: ________
+District: ________
+
+COMPLAINANT DETAILS
+Name: ________
+Contact Number: ________
+Email: ________
+ID Proof: ________
+
+INCIDENT DETAILS
+Type of Offence: ________
+Date of Incident: ________
+Time of Incident: ________
+Place of Incident: ________
+
+NARRATION OF INCIDENT
+________
+
+DESCRIPTION OF ACCUSED (IF KNOWN)
+________
+
+Signature of Complainant
+Name: ________

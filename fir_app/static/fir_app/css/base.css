@@ -1,0 +1,96 @@
+/* base.css */
+
+body {
+    background-color: #f6f8fb;
+    color: #243044;
+}
+
+.navbar-custom {
+    background: #f7f8fb;
+    border-bottom: 1px solid rgba(36, 48, 68, 0.08);
+    box-shadow: 0 1px 0 rgba(36, 48, 68, 0.04);
+}
+
+.navbar-custom .navbar-brand {
+    font-weight: 700;
+    color: #1f304a;
+    letter-spacing: 0.02em;
+}
+
+.navbar-custom .navbar-brand:hover,
+.navbar-custom .navbar-brand:focus {
+    color: #0b3a66;
+}
+
+.navbar-custom .navbar-toggler {
+    border-color: rgba(36, 48, 68, 0.12);
+}
+
+.navbar-custom .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%2334364d' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.navbar-custom .nav-link {
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.navbar-custom .nav-link:hover,
+.navbar-custom .nav-link:focus {
+    color: #0b3a66;
+}
+
+.navbar-custom .btn-login-nav,
+.navbar-custom .btn-register-nav {
+    color: #243044;
+    background: #ffffff;
+    border: 1px solid rgba(36, 48, 68, 0.12);
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: all 0.2s ease;
+}
+
+.navbar-custom .btn-login-nav:hover,
+.navbar-custom .btn-register-nav:hover {
+    background: #eef4fb;
+    color: #0b3a66;
+}
+
+.auth-card {
+    max-width: 450px;
+    margin: auto;
+    margin-top: 5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.footer-custom {
+    text-align: center;
+    padding: 0.8rem 0;
+    background: linear-gradient(180deg, #001d4d 0%, #0b3a66 100%);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+}
+
+/* Pin footer to bottom of viewport and ensure content isn't hidden */
+.footer-custom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1020;
+}
+
+main {
+    padding-bottom: 80px;
+}
+
+.footer-custom p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Subtle page container for classic look */
+.container-main {
+    max-width: 1200px;
+    margin: 0 auto;
+}

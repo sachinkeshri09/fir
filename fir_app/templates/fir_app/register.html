@@ -1,0 +1,63 @@
+{% extends 'fir_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'fir_app/css/auth.css' %}">
+
+<div class="auth-container">
+    <div class="auth-wrapper">
+        <div class="auth-left">
+            <div class="auth-left-content">
+                <div class="auth-left-badge">JOIN FIR DRAFT</div>
+                <h1 class="auth-left-title">Create your account<br><span>and start filing quickly</span></h1>
+                <p class="auth-left-subtitle">Register once to access the FIR draft management system and keep your reports organized securely.</p>
+
+                <div class="auth-left-features">
+                    <div class="feature-item">
+                        <i class="fas fa-lock"></i>
+                        <div>
+                            <h5>Trusted Access</h5>
+                            <p>Secure account setup with encrypted credentials.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h5>Fast Setup</h5>
+                            <p>Register and begin drafting FIR details in moments.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <div>
+                            <h5>Easy Management</h5>
+                            <p>Track drafts, review history, and maintain records smoothly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-right">
+            <div class="auth-form-container">
+                <div class="auth-form-header">
+                    <i class="fas fa-user-plus"></i>
+                    <h2>Create Your Account</h2>
+                    <p>Fill in your details to get started with FIR Draft System.</p>
+                </div>
+
+                <form method="POST" class="auth-form">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-login w-100">
+                        <i class="fas fa-user-plus"></i> Register
+                    </button>
+                </form>
+
+                <div class="divider">OR</div>
+                <p class="signup-text">Already have an account? <a href="{% url 'login' %}" class="signup-link">Login here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

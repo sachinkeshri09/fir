@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FIR No: {{ fir.fir_number }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{% static 'fir_app/css/fir_detail.css' %}">
+</head>
+<body class="bg-light pt-5">
+
+    <div class="container text-center mb-4 no-print">
+        <button class="btn btn-primary px-4 rounded-pill shadow-sm" onclick="window.print()">
+            🖨️ Print FIR
+        </button>
+        <a href="{% url 'home' %}?tab=records" class="btn btn-outline-secondary px-4 rounded-pill ms-2">
+            Close Tab
+        </a>
+    </div>
+
+    <div id="fir-content" class="formal-letter shadow-sm mx-auto bg-white p-5 fir-detail-content">
+        <div class="fir-detail-body">{{ fir.generated_text }}</div>
+        
+        <div class="mt-5 pt-4 border-top">
+            <div class="d-flex justify-content-between align-items-end flex-wrap gap-4">
+                <div class="text-start">
+                    <p class="mb-4">Signature of the Station House Officer</p>
+                    <p>_______________________</p>
+                    <strong>STATION HOUSE OFFICER</strong>
+                </div>
+                <div class="text-end">
+                    <p class="mb-4">Signature of the Complainant</p>
+                    <p>_______________________</p>
+                    <strong>{{ fir.complaint.complainant_name|upper }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

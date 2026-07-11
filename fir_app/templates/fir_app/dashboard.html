@@ -1,0 +1,440 @@
+{% extends 'fir_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'fir_app/css/dashboard.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+
+<div class="dashboard-wrapper">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <h3>
+            <span class="logo-badge">FIR</span>
+            <span class="sidebar-title-text">FIR Draft System</span>
+        </h3>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title"><i class="fas fa-link"></i> QUICK LINKS</div>
+            <a href="{% url 'home' %}?tab=complaint" class="sidebar-link">
+                <i class="fas fa-file-alt"></i> Complaint Details
+            </a>
+            <a href="{% url 'home' %}?tab=accused" class="sidebar-link">
+                <i class="fas fa-user-tie"></i> Accused Details
+            </a>
+            <a href="{% url 'home' %}?tab=generated" class="sidebar-link">
+                <i class="fas fa-pen-fancy"></i> Generated FIR
+            </a>
+            <a href="{% url 'home' %}?tab=records" class="sidebar-link">
+                <i class="fas fa-folder"></i> FIR Records
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content" id="mainContent">
+        <!-- OVERVIEW TAB -->
+        {% if active_tab == 'overview' %}
+
+        <div class="header-section">
+            <h2>👋 Welcome back, {{ username }}!</h2>
+            <p>Here's what's happening with your FIR drafts today.</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fas fa-file"></i></div>
+                <div class="stat-content">
+                    <h3>TOTAL DRAFTS</h3>
+                    <div class="number">{{ total_drafts }}</div>
+                    <div class="change">+12 this week</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-content">
+                    <h3>GENERATED FIRS</h3>
+                    <div class="number">{{ generated_firs }}</div>
+                    <div class="change">+8 this week</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fas fa-hourglass-half"></i></div>
+                <div class="stat-content">
+                    <h3>PENDING DRAFTS</h3>
+                    <div class="number">{{ pending_drafts }}</div>
+                    <div class="change">+4 this week</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+                <div class="stat-content">
+                    <h3>TOTAL COMPLAINTS</h3>
+                    <div class="number">{{ total_complaints }}</div>
+                    <div class="change">+15 this week</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="workflow-section">
+            <h3>FIR Draft Workflow</h3>
+            <p>Complete the steps below to create a formal FIR draft.</p>
+
+            <div class="workflow-buttons">
+                <a href="{% url 'home' %}?tab=complaint" class="workflow-btn">
+                    <i class="fas fa-file-alt"></i> Complaint Details
+                </a>
+                <a href="{% url 'home' %}?tab=accused" class="workflow-btn">
+                    <i class="fas fa-user-tie"></i> Accused Details
+                </a>
+                <a href="{% url 'home' %}?tab=generated" class="workflow-btn primary">
+                    <i class="fas fa-pen-fancy"></i> Generate FIR
+                </a>
+                <a href="{% url 'home' %}?tab=records" class="workflow-btn">
+                    <i class="fas fa-folder"></i> FIR Records
+                </a>
+            </div>
+
+            <div class="workflow-steps">
+                <div class="step">
+                    <div class="step-number active">1</div>
+                    <div class="step-label">Complaint Details</div>
+                </div>
+                <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Accused Details</div>
+                </div>
+                <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Generated FIR</div>
+                </div>
+                <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-label">FIR Records</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section history-top-spacing">
+            <h3>FIR History</h3>
+            <p>Review your latest FIR drafts and records.</p>
+
+            {% if fir_records %}
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tracking Number</th>
+                            <th>Incident Type</th>
+                            <th>Generated On</th>
+                            <th>Status</th>
+                            <th class="actions-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in fir_records|slice:":5" %}
+                        <tr>
+                            <td><span class="badge badge-secondary">{{ record.fir_number }}</span></td>
+                            <td>{{ record.complaint.incident_type }}</td>
+                            <td>{{ record.generated_date|date:"M d, Y" }}</td>
+                            <td><span class="badge badge-success">Generated</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'fir_detail' record.id %}" class="btn-sm" title="View & Print">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <form method="post" action="{% url 'delete_fir_record' record.id %}" class="inline-form" onsubmit="return confirm('Delete this FIR record?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-sm danger" title="Delete">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No FIR records found. Start creating one now!</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- COMPLAINT DETAILS FORM TAB -->
+        {% elif active_tab == 'complaint' %}
+        <div class="workflow-section">
+            <h3><i class="fas fa-file-alt"></i> Enter Complaint Information</h3>
+            <form method="POST" action="{% url 'home' %}">
+                {% csrf_token %}
+                
+                <div class="section-top-spacing">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Complainant Person Name</label>
+                            {{ complaint_form.complainant_name }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">District</label>
+                            {{ complaint_form.district }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Police Station</label>
+                            {{ complaint_form.police_station }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Contact Number</label>
+                            {{ complaint_form.contact_number }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Email</label>
+                            {{ complaint_form.email }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Proof</label>
+                            {{ complaint_form.id_proof }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ID Proof Number</label>
+                            {{ complaint_form.id_proof_number }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Incident Date</label>
+                            {{ complaint_form.incident_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Incident Time</label>
+                            {{ complaint_form.incident_time }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        {{ complaint_form.location }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Type of Incident</label>
+                        {{ complaint_form.incident_type }}
+                    </div>
+
+                    <div class="mb-3" id="other-incident-group" style="display: none;">
+                        <label class="form-label">Specify Incident Type</label>
+                        {{ complaint_form.other_incident_type }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Preferred FIR Language</label>
+                        {{ complaint_form.language_preference }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        {{ complaint_form.description }}
+                    </div>
+
+                    <div class="section-top-spacing">
+                        <button type="submit" name="submit_complaint" class="workflow-btn primary">
+                            <i class="fas fa-save"></i> Save & Next
+                        </button>
+                        <a href="{% url 'home' %}?tab=overview" class="workflow-btn no-underline">
+                            <i class="fas fa-arrow-left"></i> Back to Overview
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- ACCUSED DETAILS FORM TAB -->
+        {% elif active_tab == 'accused' %}
+        <div class="workflow-section">
+            <h3><i class="fas fa-user-tie"></i> Enter Accused Information</h3>
+            <form method="POST" action="{% url 'home' %}">
+                {% csrf_token %}
+                <div class="section-top-spacing">
+                    {{ accused_form.as_p }}
+                    <div class="section-top-spacing">
+                        <button type="submit" name="submit_accused" class="workflow-btn primary">
+                            <i class="fas fa-save"></i> Save & Next
+                        </button>
+                        <a href="{% url 'home' %}?tab=complaint" class="workflow-btn no-underline">
+                            <i class="fas fa-arrow-left"></i> Back to Complaint
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- GENERATED FIR TAB -->
+        {% elif active_tab == 'generated' %}
+        <div class="workflow-section">
+            <h3><i class="fas fa-pen-fancy"></i> Generated FIR</h3>
+            {% if latest_unrecorded_complaint %}
+            <div class="info-card info-card--centered">
+                <i class="fas fa-file-export info-card__icon"></i>
+                <h4 class="info-card__title">Ready to Generate FIR</h4>
+                <p class="info-card__text">Your complaint and accused details are ready. Click the button below to generate the FIR from AI.</p>
+                <form action="{% url 'generate_fir' %}" method="POST" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" class="workflow-btn primary">
+                        <i class="fas fa-magic"></i> Generate FIR Document
+                    </button>
+                </form>
+            </div>
+            {% elif fir_records.first %}
+            <div class="section-top-spacing">
+                <div class="info-card__document">
+                    <div class="document-header">
+                        <div><strong>FIR No:</strong> {{ fir_records.first.fir_number }}</div>
+                        <div class="document-meta">
+                            <strong>Date:</strong> {% now "F d, Y" %}<br>
+                            <strong>Time:</strong> {% now "H:i A" %}
+                        </div>
+                    </div>
+                    <div class="document-body">{{ fir_records.first.generated_text }}</div>
+                    <div class="document-signatures">
+                        <div>
+                            <p class="signature-label">Signature of the Station House Officer</p>
+                            <p class="signature-line"></p>
+                            <strong>STATION HOUSE OFFICER</strong>
+                        </div>
+                        <div class="text-end">
+                            <p class="signature-label">Signature of the Complainant</p>
+                            <p class="signature-line"></p>
+                            <strong>{{ fir_records.first.complaint.complainant_name|upper }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-top-spacing text-center">
+                    <a href="{% url 'fir_detail' fir_records.first.id %}" class="workflow-btn primary no-underline">
+                        <i class="fas fa-print"></i> Print FIR
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state empty-state--centered">
+                <i class="fas fa-inbox empty-state__icon"></i>
+                <h4 class="empty-state__title">No FIR Drafted Yet</h4>
+                <p class="empty-state__text">Please fill out the Complaint Details and Accused Details first.</p>
+                <a href="{% url 'home' %}?tab=complaint" class="workflow-btn primary no-underline">
+                    <i class="fas fa-arrow-left"></i> Go to Complaint Details
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- FIR RECORDS TAB -->
+        {% elif active_tab == 'records' %}
+        <div class="history-section">
+            <h3><i class="fas fa-folder"></i> FIR History & Records</h3>
+            <p>Manage all your FIR drafts and records.</p>
+
+            {% if fir_records %}
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tracking Number</th>
+                            <th>Incident Type</th>
+                            <th>Generated On</th>
+                            <th>Status</th>
+                            <th class="actions-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in fir_records %}
+                        <tr>
+                            <td><span class="badge badge-secondary">{{ record.fir_number }}</span></td>
+                            <td>{{ record.complaint.incident_type }}</td>
+                            <td>{{ record.generated_date|date:"M d, Y H:i A" }}</td>
+                            <td><span class="badge badge-success">Generated</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'fir_detail' record.id %}" class="btn-sm" title="View & Print">
+                                        <i class="fas fa-eye"></i> View & Print
+                                    </a>
+                                    <form method="post" action="{% url 'delete_fir_record' record.id %}" class="inline-form" onsubmit="return confirm('Delete this FIR record?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-sm danger" title="Delete">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state empty-state--centered">
+                <i class="fas fa-inbox empty-state__icon"></i>
+                <p class="empty-state__text">No FIR records found. Start creating one now!</p>
+                <a href="{% url 'home' %}?tab=complaint" class="workflow-btn primary no-underline section-top-spacing">
+                    <i class="fas fa-plus"></i> Create New FIR
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- DEFAULT TO OVERVIEW IF NO TAB SPECIFIED -->
+        {% else %}
+        <div class="empty-state empty-state--centered">
+            <p>Please select an option from the sidebar</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Highlight active sidebar link
+        const currentTab = new URLSearchParams(window.location.search).get('tab') || 'overview';
+        const links = document.querySelectorAll('.sidebar-link');
+        links.forEach(link => {
+            if (link.href.includes('tab=' + currentTab)) {
+                link.classList.add('active');
+            }
+        });
+
+        const incidentSelect = document.getElementById('incident-select');
+        const otherIncidentGroup = document.getElementById('other-incident-group');
+
+        function toggleOtherIncidentField() {
+            if (!incidentSelect || !otherIncidentGroup) {
+                return;
+            }
+            if (incidentSelect.value === 'Other') {
+                otherIncidentGroup.style.display = 'block';
+            } else {
+                otherIncidentGroup.style.display = 'none';
+            }
+        }
+
+        if (incidentSelect) {
+            incidentSelect.addEventListener('change', toggleOtherIncidentField);
+            toggleOtherIncidentField();
+        }
+    });
+</script>
+
+{% endblock %}
