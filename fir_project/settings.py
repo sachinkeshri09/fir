@@ -29,7 +29,19 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-qznnc2u79!9syhji11ll#^^r6#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [
+    host.strip().replace('http://', '').replace('https://', '')
+    for host in ALLOWED_HOSTS_ENV.split(',')
+    if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{host}" if not host.lower().startswith(('http://', 'https://')) else host
+    for host in ALLOWED_HOSTS
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
