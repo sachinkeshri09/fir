@@ -18,12 +18,13 @@
 }
 
 /* 2. EXACT A4 PRINT STYLING */
-@media print {
-    @page {
-        size: A4;
-        margin: 0;
-    }
+/* Exact print page settings for FIR detail print layout */
+@page {
+    size: A4;
+    margin: 0;
+}
 
+@media print {
     body {
         background-color: white !important;
     }

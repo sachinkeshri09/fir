@@ -34,14 +34,13 @@ body {
     background-color: #fafafa;
 }
 
+/* 1. This removes the browser's default URL and Date headers */
+@page {
+    size: A4;
+    margin: 0mm;
+}
+
 @media print {
-
-    /* 1. This removes the browser's default URL and Date headers */
-    @page {
-        size: A4;
-        margin: 0mm;
-    }
-
     body {
         background-color: white !important;
         margin: 0;

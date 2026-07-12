@@ -90,7 +90,14 @@ Create a `.env` file in the root directory with:
 ```
 DEBUG=True
 SECRET_KEY=your-secret-key-here
+GEMINI_API_KEY=your-google-generative-language-api-key
 ```
+
+The project also accepts `GOOGLE_API_KEY` as an alias for `GEMINI_API_KEY`.
+
+For Render deployment, set the same secret in the Render dashboard as an environment variable named `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
+
+The code now uses the modern `google-genai` package only; the legacy `google-generativeai` package is no longer required.
 
 ## Usage
 

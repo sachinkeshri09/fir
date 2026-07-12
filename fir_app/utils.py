@@ -1,10 +1,17 @@
 # fir_app/utils.py
-import google.generativeai as genai
-from django.conf import settings
 import logging
+import os
 import re
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+try:
+    from google import genai as new_genai
+    HAS_NEW_GENAI = True
+except ImportError:
+    new_genai = None
+    HAS_NEW_GENAI = False
 
 
 def sanitize_generated_fir_text(text):
@@ -68,73 +75,27 @@ def draft_fir_with_ai(complaint, accused_list):
     Calls the Gemini API and returns the generated FIR text.
     """
     try:
-        # Configure the API with your secure key
-        api_key = settings.GEMINI_API_KEY
-        
+        api_key = settings.GEMINI_API_KEY or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         if not api_key:
-            return "ERROR: Gemini API key not configured in settings"
-        
-        genai.configure(api_key=api_key)
-        
-        # Try multiple model names in order of preference
-        models_to_try = ['gemini-3.1-flash-lite', 'gemini-3.1', 'gemini-2.1', 'gemini-1.0']
-        
-        model = None
-        last_error = None
-        
-        # First, try to get list of available models
-        try:
-            available_models = genai.list_models()
-            available_model_names = []
-            
-            for m in available_models:
-                # Check if model supports generateContent
-                if hasattr(m, 'supported_generation_methods'):
-                    if 'generateContent' in [method.name for method in m.supported_generation_methods]:
-                        available_model_names.append(m.name)
-            
-            if available_model_names:
-                # Use the first available model that supports generateContent
-                model_name = available_model_names[0]
-                model = genai.GenerativeModel('gemini-3.1-flash-lite')  # Use the first available model
-                logger.info(f"Using model: {model_name}")
-        except Exception as e:
-            logger.warning(f"Could not list models: {str(e)}")
-            last_error = e
-        
-        # If list_models failed, try hardcoded models
-        if not model:
-            for model_name in models_to_try:
-                try:
-                    model = genai.GenerativeModel(model_name)
-                    logger.info(f"Using fallback model: {model_name}")
-                    break
-                except Exception as e:
-                    last_error = e
-                    logger.warning(f"Model {model_name} not available: {str(e)}")
-                    continue
-        
-        if not model:
-            return f"ERROR: No available Gemini models found. Last error: {str(last_error)}"
+            return "ERROR: Gemini/Google API key not configured in settings"
 
-        # Format the accused details if any exist
-        accused_info = ""
-        if accused_list.exists():
-            accused_info = "Accused Details:\n"
-            for idx, accused in enumerate(accused_list, 1):
-                name = accused.name or 'Unknown'
-                age = accused.age or 'Unknown'
-                desc = accused.physical_description or 'None provided'
-                rel = accused.relationship_to_victim or 'None'
-                accused_info += f"{idx}. Name: {name}, Age: {age}, Description: {desc}, Relationship: {rel}\n"
+        def build_prompt():
+            accused_info = ""
+            if accused_list.exists():
+                accused_info = "Accused Details:\n"
+                for idx, accused in enumerate(accused_list, 1):
+                    name = accused.name or 'Unknown'
+                    age = accused.age or 'Unknown'
+                    desc = accused.physical_description or 'None provided'
+                    rel = accused.relationship_to_victim or 'None'
+                    accused_info += f"{idx}. Name: {name}, Age: {age}, Description: {desc}, Relationship: {rel}\n"
 
-        language_pref = getattr(complaint, 'language_preference', 'English') or 'English'
-        language_instruction = 'Write the final FIR in fluent English.'
-        if language_pref.lower() == 'hindi':
-            language_instruction = 'Write the final FIR in fluent Hindi, using Devanagari script, while keeping the format formal and professional.'
+            language_pref = getattr(complaint, 'language_preference', 'English') or 'English'
+            language_instruction = 'Write the final FIR in fluent English.'
+            if language_pref.lower() == 'hindi':
+                language_instruction = 'Write the final FIR in fluent Hindi, using Devanagari script, while keeping the format formal and professional.'
 
-        # Construct the System Prompt
-        prompt = f"""Act as an expert Indian Police Station House Officer. Write a formal FIR using a legal-police style layout.
+            return f"""Act as an expert Indian Police Station House Officer. Write a formal FIR using a legal-police style layout.
 
 IMPORTANT FORMAT RULES:
 - Start with 'FIRST INFORMATION REPORT'
@@ -167,9 +128,30 @@ NARRATION OF INCIDENT:
 
 Write the final FIR in a proper formal format as used by Indian police."""
 
-        # Generate content
-        response = model.generate_content(prompt)
-        return sanitize_generated_fir_text(response.text)
+        prompt = build_prompt()
+
+        if not HAS_NEW_GENAI:
+            return "ERROR: No supported Gemini client installed. Install google-genai."
+
+        os.environ.setdefault('GOOGLE_API_KEY', api_key)
+        client = new_genai.Client()
+        response = client.responses.create(
+            model='gemini-3.1-flash-lite',
+            input=prompt,
+        )
+        generated_text = getattr(response, 'output_text', None)
+        if not generated_text and hasattr(response, 'output') and response.output:
+            for output_item in response.output:
+                if hasattr(output_item, 'content') and output_item.content:
+                    for content_item in output_item.content:
+                        if hasattr(content_item, 'text') and content_item.text:
+                            generated_text = str(content_item.text)
+                            break
+                    if generated_text:
+                        break
+        if not generated_text:
+            generated_text = str(response)
+        return sanitize_generated_fir_text(generated_text)
         
     except Exception as e:
         logger.error(f"FIR Generation Error: {str(e)}", exc_info=True)

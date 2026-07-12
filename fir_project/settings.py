@@ -144,6 +144,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'fir_app' / 'static',
+]
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
@@ -154,7 +157,7 @@ LOGOUT_REDIRECT_URL = 'login'
 # (At the very bottom of the file)
 
 # GEMINI AI INTEGRATION
-GEMINI_API_KEY =  os.getenv('GEMINI_API_KEY')  # Load the Gemini API key from environment variables
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
 
 # Print password reset emails to the terminal for local testing
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

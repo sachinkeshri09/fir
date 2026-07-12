@@ -1,4 +1,3 @@
-import google.generativeai as genai
 from .utils import draft_fir_with_ai
 from django.conf import settings
 from django.http import HttpResponseForbidden
@@ -154,9 +153,6 @@ def generate_fir_view(request):
             )
             messages.success(request, "Your FIR has been successfully drafted by AI!")
             return redirect(f"{reverse('home')}?tab=records")
-
-        if generated_text.startswith("ERROR:"):
-            messages.error(request, f"AI Generation Failed: {generated_text}")
 
     return redirect(f"{reverse('home')}?tab=generated")
 
