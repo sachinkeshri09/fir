@@ -82,6 +82,21 @@ class StaticPageTests(TestCase):
         self.assertContains(response, 'Contact')
 
 
+class LoginRedirectTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester', password='secret123')
+
+    def test_login_redirects_to_next_parameter(self):
+        response = self.client.post(
+            reverse('login') + '?next=/about/',
+            {'username': 'tester', 'password': 'secret123'},
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/about/')
+
+
 class DashboardWorkflowTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='tester', password='secret123')

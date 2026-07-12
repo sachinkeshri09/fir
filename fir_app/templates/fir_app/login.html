@@ -51,6 +51,9 @@
 
                 <form method="POST" class="auth-form">
                     {% csrf_token %}
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
                     
                     <div class="form-group">
                         <label for="id_username">Username</label>

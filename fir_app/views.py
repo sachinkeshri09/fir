@@ -29,6 +29,9 @@ def register_view(request):
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('home')
+
+    next_url = request.GET.get('next') or request.POST.get('next') or 'home'
+
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
         if form.is_valid():
@@ -38,10 +41,13 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f"You are now logged in as {username}.")
+                if next_url and next_url != 'home':
+                    return redirect(next_url)
                 return redirect('home')
     else:
         form = CustomLoginForm()
-    return render(request, 'fir_app/login.html', {'form': form})
+
+    return render(request, 'fir_app/login.html', {'form': form, 'next': next_url})
 
 def logout_view(request):
     logout(request)
