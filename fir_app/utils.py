@@ -69,15 +69,30 @@ Name: {complaint.complainant_name}
 """
 
 
+def _extract_generated_text(response):
+    generated_text = getattr(response, 'output_text', None)
+    if generated_text:
+        return generated_text
+
+    if hasattr(response, 'text') and response.text:
+        return str(response.text)
+
+    if hasattr(response, 'output') and response.output:
+        for output_item in response.output:
+            if hasattr(output_item, 'content') and output_item.content:
+                for content_item in output_item.content:
+                    if hasattr(content_item, 'text') and content_item.text:
+                        return str(content_item.text)
+    return None
+
+
 def draft_fir_with_ai(complaint, accused_list):
     """
     Takes a ComplaintDetails object and a QuerySet of AccusedDetails.
-    Calls the Gemini API and returns the generated FIR text.
+    Calls the Gemini API when available and otherwise returns a locally formatted FIR draft.
     """
     try:
         api_key = settings.GEMINI_API_KEY or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-        if not api_key:
-            return "ERROR: Gemini/Google API key not configured in settings"
 
         def build_prompt():
             accused_info = ""
@@ -130,29 +145,22 @@ Write the final FIR in a proper formal format as used by Indian police."""
 
         prompt = build_prompt()
 
-        if not HAS_NEW_GENAI:
-            return "ERROR: No supported Gemini client installed. Install google-genai."
+        if api_key and HAS_NEW_GENAI:
+            os.environ.setdefault('GOOGLE_API_KEY', api_key)
+            client = new_genai.Client(api_key=api_key)
+            if hasattr(client, 'responses') and hasattr(client.responses, 'create'):
+                response = client.responses.create(model='gemini-2.0-flash', input=prompt)
+            elif hasattr(client, 'models') and hasattr(client.models, 'generate_content'):
+                response = client.models.generate_content(model='gemini-2.0-flash', contents=prompt)
+            else:
+                raise AttributeError('No supported Gemini request method available in the installed SDK.')
 
-        os.environ.setdefault('GOOGLE_API_KEY', api_key)
-        client = new_genai.Client()
-        response = client.responses.create(
-            model='gemini-3.1-flash-lite',
-            input=prompt,
-        )
-        generated_text = getattr(response, 'output_text', None)
-        if not generated_text and hasattr(response, 'output') and response.output:
-            for output_item in response.output:
-                if hasattr(output_item, 'content') and output_item.content:
-                    for content_item in output_item.content:
-                        if hasattr(content_item, 'text') and content_item.text:
-                            generated_text = str(content_item.text)
-                            break
-                    if generated_text:
-                        break
-        if not generated_text:
-            generated_text = str(response)
-        return sanitize_generated_fir_text(generated_text)
-        
+            generated_text = _extract_generated_text(response)
+            if generated_text:
+                return sanitize_generated_fir_text(generated_text)
+
+        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list))
+
     except Exception as e:
         logger.error(f"FIR Generation Error: {str(e)}", exc_info=True)
-        return f"ERROR: {str(e)}"
+        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list))

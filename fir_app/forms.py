@@ -55,6 +55,7 @@ class ComplaintDetailsForm(forms.ModelForm):
     language_preference = forms.ChoiceField(
         choices=LANGUAGE_CHOICES,
         initial='English',
+        required=False,
         widget=forms.Select(attrs={'class': 'form-select mb-3'})
     )
     other_incident_type = forms.CharField(
@@ -98,6 +99,9 @@ class ComplaintDetailsForm(forms.ModelForm):
 
         if incident_type == 'Other' and not other_incident_type:
             self.add_error('other_incident_type', 'Please specify the incident type when selecting Other.')
+
+        if not cleaned_data.get('language_preference'):
+            cleaned_data['language_preference'] = 'English'
 
         return cleaned_data
 
