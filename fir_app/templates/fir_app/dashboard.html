@@ -348,6 +348,19 @@
             <h3><i class="fas fa-folder"></i> FIR History & Records</h3>
             <p>Manage all your FIR drafts and records.</p>
 
+            <form method="get" class="mb-3 d-flex flex-wrap gap-2 align-items-center" action="{% url 'home' %}">
+                <input type="hidden" name="tab" value="records">
+                <input type="text" name="search" class="form-control" placeholder="Search by FIR ID" value="{{ search_query }}" style="max-width: 280px;">
+                <button type="submit" class="workflow-btn primary no-underline">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                {% if search_query %}
+                <a href="{% url 'home' %}?tab=records" class="workflow-btn no-underline">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </form>
+
             {% if fir_records %}
             <div class="table-responsive">
                 <table class="history-table">

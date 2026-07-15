@@ -1,5 +1,9 @@
+import os
 from datetime import date, time
+from importlib import reload
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -81,6 +85,42 @@ class StaticPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Contact')
 
+    def test_home_page_shows_landing_content_for_guests(self):
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'FIR Draft System')
+        self.assertContains(response, 'Login')
+        self.assertContains(response, 'Register')
+
+    def test_home_page_redirects_authenticated_users_to_dashboard(self):
+        user = User.objects.create_user(username='dashboarduser', password='secret123')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Welcome back')
+
+
+class SessionSettingsTests(TestCase):
+    def test_session_settings_are_secure_for_production(self):
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertFalse(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+        self.assertGreater(settings.SESSION_COOKIE_AGE, 60 * 60 * 24)
+
+
+class EmailSettingsTests(TestCase):
+    def test_email_backend_switches_to_smtp_when_credentials_are_present(self):
+        import fir_project.settings as settings_module
+
+        with patch.dict(os.environ, {
+            'EMAIL_HOST': 'smtp.example.com',
+            'EMAIL_HOST_USER': 'user@example.com',
+            'EMAIL_HOST_PASSWORD': 'secret123',
+        }, clear=False):
+            reloaded_settings = reload(settings_module)
+            self.assertEqual(reloaded_settings.EMAIL_BACKEND, 'django.core.mail.backends.smtp.EmailBackend')
+
 
 class LoginRedirectTests(TestCase):
     def setUp(self):
@@ -141,6 +181,66 @@ class DashboardWorkflowTests(TestCase):
 
         self.assertRedirects(response, reverse('home') + '?tab=records')
         self.assertTrue(FIRRecord.objects.filter(complaint=complaint).exists())
+
+    def test_generate_fir_redirects_to_records_when_fir_already_exists(self):
+        complaint = ComplaintDetails.objects.create(
+            user=self.user,
+            complainant_name='Asha Kumar',
+            district='Bengaluru',
+            police_station='Cubbon Park',
+            incident_date=date(2026, 7, 10),
+            incident_time=time(14, 30),
+            location='MG Road',
+            incident_type='Theft/Robbery',
+            description='Mobile phone stolen during the evening.',
+            contact_number='9876543210',
+            email='asha@example.com',
+            id_proof='Aadhaar Card',
+        )
+        FIRRecord.objects.create(complaint=complaint, generated_text='Existing FIR text')
+
+        response = self.client.post(reverse('generate_fir'), follow=True)
+
+        self.assertRedirects(response, reverse('home') + '?tab=records')
+        self.assertContains(response, 'already has a generated FIR')
+
+    def test_records_tab_search_prioritizes_matching_fir(self):
+        first_complaint = ComplaintDetails.objects.create(
+            user=self.user,
+            complainant_name='Asha Kumar',
+            district='Bengaluru',
+            police_station='Cubbon Park',
+            incident_date=date(2026, 7, 10),
+            incident_time=time(14, 30),
+            location='MG Road',
+            incident_type='Theft/Robbery',
+            description='Mobile phone stolen during the evening.',
+            contact_number='9876543210',
+            email='asha@example.com',
+            id_proof='Aadhaar Card',
+        )
+        first_fir = FIRRecord.objects.create(complaint=first_complaint, generated_text='First FIR text')
+
+        second_complaint = ComplaintDetails.objects.create(
+            user=self.user,
+            complainant_name='Ravi Patel',
+            district='Pune',
+            police_station='Shivaji Nagar',
+            incident_date=date(2026, 7, 11),
+            incident_time=time(10, 15),
+            location='FC Road',
+            incident_type='Assault',
+            description='Argument escalated into assault.',
+            contact_number='9123456780',
+            email='ravi@example.com',
+            id_proof='PAN Card',
+        )
+        FIRRecord.objects.create(complaint=second_complaint, generated_text='Second FIR text')
+
+        response = self.client.get(reverse('home') + '?tab=records&search=' + first_fir.fir_number)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['fir_records'][0].id, first_fir.id)
 
     def test_delete_fir_record_removes_it(self):
         complaint = ComplaintDetails.objects.create(

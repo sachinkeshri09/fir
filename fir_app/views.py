@@ -63,10 +63,15 @@ def contact_view(request):
     return render(request, 'fir_app/contact.html')
 
 
-# --- NEW DASHBOARD VIEW ---
+# --- HOME / DASHBOARD VIEW ---
 
-@login_required(login_url='login')
 def dashboard_view(request):
+    if not request.user.is_authenticated:
+        return render(request, 'fir_app/index.html', {
+            'is_authenticated': False,
+            'page_title': 'FIR Draft System',
+        })
+
     # 1. Initialize empty forms
     complaint_form = ComplaintDetailsForm()
     accused_form = AccusedDetailsForm()
@@ -97,12 +102,23 @@ def dashboard_view(request):
 
     # Get user's data for dashboard stats
     all_complaints = ComplaintDetails.objects.filter(user=request.user)
-    fir_records = FIRRecord.objects.filter(complaint__user=request.user).order_by('-generated_date')
+    query = request.GET.get('search', '').strip()
+    fir_records_qs = FIRRecord.objects.filter(complaint__user=request.user).order_by('-generated_date')
+
+    if query:
+        fir_records_qs = fir_records_qs.filter(fir_number__icontains=query)
+
+    fir_records = list(fir_records_qs)
+    if query:
+        matching_records = [record for record in fir_records if query.lower() in record.fir_number.lower()]
+        other_records = [record for record in fir_records if query.lower() not in record.fir_number.lower()]
+        fir_records = matching_records + other_records
+
     latest_unrecorded_complaint = ComplaintDetails.objects.filter(user=request.user, fir_record__isnull=True).order_by('-created_at').first()
     
     # Calculate statistics
     total_drafts = all_complaints.count()
-    generated_firs = fir_records.count()
+    generated_firs = len(fir_records)
     pending_drafts = all_complaints.filter(fir_record__isnull=True).count()
     total_complaints = total_drafts
     
@@ -116,9 +132,11 @@ def dashboard_view(request):
     recent_firs = fir_records[:5]
     
     context = {
+        'is_authenticated': True,
         'complaint_form': complaint_form,
         'accused_form': accused_form,
         'fir_records': fir_records,
+        'search_query': query,
         'latest_unrecorded_complaint': latest_unrecorded_complaint,
         'total_drafts': total_drafts,
         'generated_firs': generated_firs,
@@ -141,11 +159,15 @@ def dashboard_view(request):
 @login_required(login_url='login')
 def generate_fir_view(request):
     if request.method == 'POST':
-        latest_complaint = ComplaintDetails.objects.filter(user=request.user, fir_record__isnull=True).order_by('-created_at').first()
+        latest_complaint = ComplaintDetails.objects.filter(user=request.user).order_by('-created_at').first()
 
         if not latest_complaint:
             messages.error(request, "You must submit a Complaint Details form first.")
-            return redirect('home')
+            return redirect(f"{reverse('home')}?tab=complaint")
+
+        if hasattr(latest_complaint, 'fir_record') and latest_complaint.fir_record:
+            messages.info(request, "This complaint already has a generated FIR. Please view or delete the existing record.")
+            return redirect(f"{reverse('home')}?tab=records")
 
         accused_list = latest_complaint.accused_persons.all()
         generated_text = draft_fir_with_ai(latest_complaint, accused_list)
