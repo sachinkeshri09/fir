@@ -5,3 +5,4 @@ asgiref==3.11.1
 gunicorn
 whitenoise
 google-genai
+psycopg[binary]==3.3.4
