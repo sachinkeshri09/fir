@@ -170,15 +170,21 @@ def generate_fir_view(request):
             return redirect(f"{reverse('home')}?tab=records")
 
         accused_list = latest_complaint.accused_persons.all()
-        generated_text = draft_fir_with_ai(latest_complaint, accused_list)
+        fir_record = FIRRecord(complaint=latest_complaint, generated_text='')
+        fir_record.save()
+        generated_text = draft_fir_with_ai(
+            latest_complaint,
+            accused_list,
+            fir_record=fir_record,
+            registration_datetime=fir_record.generated_date,
+        )
 
         if generated_text.startswith("ERROR:"):
+            fir_record.delete()
             messages.error(request, f"AI Generation Failed: {generated_text}")
         else:
-            FIRRecord.objects.create(
-                complaint=latest_complaint,
-                generated_text=generated_text
-            )
+            fir_record.generated_text = generated_text
+            fir_record.save(update_fields=['generated_text'])
             messages.success(request, "Your FIR has been successfully drafted by AI!")
             return redirect(f"{reverse('home')}?tab=records")
 

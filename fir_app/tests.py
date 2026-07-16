@@ -1,5 +1,5 @@
 import os
-from datetime import date, time
+from datetime import date, datetime, time
 from importlib import reload
 from unittest.mock import patch
 
@@ -289,12 +289,70 @@ class FormalFIRFormattingTests(TestCase):
         self.assertIn('INCIDENT DETAILS', text.upper())
         self.assertIn('NARRATION OF INCIDENT', text.upper())
 
+    def test_build_formal_fir_text_includes_formal_header_details(self):
+        complaint = type('Complaint', (), {
+            'district': 'HAZARIBAGH',
+            'police_station': 'KORRAH',
+            'complainant_name': 'Sheetal Kumari',
+            'contact_number': '9876543210',
+            'email': 'sheetal@example.com',
+            'id_proof': 'Aadhaar Card',
+            'id_proof_number': '123456789012',
+            'incident_type': 'Theft/Robbery',
+            'incident_date': '2026-07-08',
+            'incident_time': '09:31',
+            'location': 'District More, Hazaribagh',
+            'description': 'Wallet stolen while present at the location.'
+        })()
+        accused_list = []
+        fir_record = type('FIRRecord', (), {'fir_number': '0042/2026'})()
+        registration_dt = datetime(2026, 7, 8, 11, 0)
+
+        text = build_formal_fir_text(complaint, accused_list, fir_record=fir_record, registration_datetime=registration_dt)
+
+        self.assertIn('FIRST INFORMATION REPORT', text)
+        self.assertIn('(Under Section 173 of the Bharatiya Nagarik Suraksha Sanhita, 2023)', text)
+        self.assertIn('DISTRICT: HAZARIBAGH', text)
+        self.assertIn('POLICE STATION: KORRAH', text)
+        self.assertIn('FIR NUMBER: 0042/2026', text)
+        self.assertIn('DATE AND TIME OF REGISTRATION: 08-07-2026, 11:00 HRS', text)
+
+    def test_build_formal_fir_text_includes_complainant_name_and_id_number(self):
+        complaint = type('Complaint', (), {
+            'district': 'Bengaluru',
+            'police_station': 'Cubbon Park',
+            'complainant_name': 'Asha Kumar',
+            'contact_number': '9876543210',
+            'email': 'asha@example.com',
+            'id_proof': 'Aadhaar Card',
+            'id_proof_number': '123456789012',
+            'incident_type': 'Theft/Robbery',
+            'incident_date': '2026-07-10',
+            'incident_time': '14:30',
+            'location': 'MG Road',
+            'description': 'Mobile phone stolen during the evening.'
+        })()
+        accused_list = []
+
+        text = build_formal_fir_text(complaint, accused_list)
+
+        self.assertIn('Name: Asha Kumar', text)
+        self.assertIn('ID Proof Number: 123456789012', text)
+
     def test_sanitize_generated_fir_text_removes_signature_block(self):
         raw_text = "FIRST INFORMATION REPORT\n\nSignature of Complainant\nName: Asha Kumar"
 
         cleaned = sanitize_generated_fir_text(raw_text)
 
         self.assertNotIn('signature of complainant', cleaned.lower())
+
+    def test_sanitize_generated_fir_text_preserves_complainant_details(self):
+        raw_text = "FIRST INFORMATION REPORT\n\nCOMPLAINANT DETAILS\nName: Asha Kumar\nID Proof Number: 123456789012"
+
+        cleaned = sanitize_generated_fir_text(raw_text)
+
+        self.assertIn('Name: Asha Kumar', cleaned)
+        self.assertIn('ID Proof Number: 123456789012', cleaned)
 
     def test_sanitize_generated_fir_text_removes_duplicate_fir_header(self):
         raw_text = "FIRST INFORMATION REPORT\n\nFIR No: FIR-20260710-123456\nDate: 10 July 2026\nTime: 14:30\n\nNarration of incident"

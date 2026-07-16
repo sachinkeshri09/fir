@@ -18,6 +18,10 @@ services:
         value: "true"
       - key: DEFAULT_FROM_EMAIL
         value: noreply@yourdomain.com
+      - key: SECRET_KEY
+        value: change-this-to-a-strong-secret-key
+      - key: DEBUG
+        value: "false"
 
 databases:
   - name: fir-db

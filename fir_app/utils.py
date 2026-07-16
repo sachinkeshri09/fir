@@ -2,6 +2,7 @@
 import logging
 import os
 import re
+from datetime import datetime
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,6 @@ def sanitize_generated_fir_text(text):
 
     cleaned = re.sub(r"\n\s*signature of the complainant.*", "", text, flags=re.IGNORECASE | re.DOTALL)
     cleaned = re.sub(r"\n\s*signature of complainant.*", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
-    cleaned = re.sub(r"\n\s*name: .*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\n\s*fir no:.*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\n\s*date:.*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\n\s*time:.*", "", cleaned, flags=re.IGNORECASE)
@@ -29,7 +29,7 @@ def sanitize_generated_fir_text(text):
     return cleaned.strip()
 
 
-def build_formal_fir_text(complaint, accused_list):
+def build_formal_fir_text(complaint, accused_list, fir_record=None, registration_datetime=None):
     accused_info = ""
     if accused_list.exists() if hasattr(accused_list, 'exists') else False:
         accused_info = "\nDESCRIPTION OF ACCUSED (IF KNOWN)\n"
@@ -40,19 +40,28 @@ def build_formal_fir_text(complaint, accused_list):
             rel = accused.relationship_to_victim or 'Not provided'
             accused_info += f"{idx}. Name: {name}; Age: {age}; Description: {desc}; Relationship to Victim: {rel}\n"
 
-    return f"""FIRST INFORMATION REPORT
+    fir_number = getattr(fir_record, 'fir_number', None) or '__________'
+    if registration_datetime is None:
+        registration_datetime = getattr(fir_record, 'generated_date', None) or datetime.now()
 
-Police Station: {complaint.police_station}
-District: {complaint.district}
-FIR No: __________
-Date: __________
-Time: __________
+    if isinstance(registration_datetime, datetime):
+        registration_text = registration_datetime.strftime('%d-%m-%Y, %H:%M HRS')
+    else:
+        registration_text = str(registration_datetime)
+
+    return f"""FIRST INFORMATION REPORT
+(Under Section 173 of the Bharatiya Nagarik Suraksha Sanhita, 2023)
+DISTRICT: {str(complaint.district or '________').upper()}
+POLICE STATION: {str(complaint.police_station or '________').upper()}
+FIR NUMBER: {fir_number}
+DATE AND TIME OF REGISTRATION: {registration_text}
 
 COMPLAINANT DETAILS
 Name: {complaint.complainant_name}
 Contact Number: {complaint.contact_number or 'Not provided'}
 Email: {complaint.email or 'Not provided'}
 ID Proof: {complaint.id_proof or 'Not provided'}
+ID Proof Number: {getattr(complaint, 'id_proof_number', 'Not provided') or 'Not provided'}
 
 INCIDENT DETAILS
 Type of Offence: {complaint.incident_type}
@@ -86,7 +95,7 @@ def _extract_generated_text(response):
     return None
 
 
-def draft_fir_with_ai(complaint, accused_list):
+def draft_fir_with_ai(complaint, accused_list, fir_record=None, registration_datetime=None):
     """
     Takes a ComplaintDetails object and a QuerySet of AccusedDetails.
     Calls the Gemini API when available and otherwise returns a locally formatted FIR draft.
@@ -110,10 +119,25 @@ def draft_fir_with_ai(complaint, accused_list):
             if language_pref.lower() == 'hindi':
                 language_instruction = 'Write the final FIR in fluent Hindi, using Devanagari script, while keeping the format formal and professional.'
 
+            effective_registration_datetime = registration_datetime
+            if effective_registration_datetime is None:
+                effective_registration_datetime = getattr(fir_record, 'generated_date', None) or datetime.now()
+
+            fir_number = getattr(fir_record, 'fir_number', None) or '__________'
+            if isinstance(effective_registration_datetime, datetime):
+                registration_text = effective_registration_datetime.strftime('%d-%m-%Y, %H:%M HRS')
+            else:
+                registration_text = str(effective_registration_datetime)
+
             return f"""Act as an expert Indian Police Station House Officer. Write a formal FIR using a legal-police style layout.
 
 IMPORTANT FORMAT RULES:
 - Start with 'FIRST INFORMATION REPORT'
+- Include the exact top header with the legal citation and these lines:
+  DISTRICT: {str(complaint.district or '').upper()}
+  POLICE STATION: {str(complaint.police_station or '').upper()}
+  FIR NUMBER: {fir_number}
+  DATE AND TIME OF REGISTRATION: {registration_text}
 - Include clear sections: 'COMPLAINANT DETAILS', 'INCIDENT DETAILS', 'NARRATION OF INCIDENT', and 'DESCRIPTION OF ACCUSED (IF KNOWN)'
 - Use formal, factual, and concise police language
 - Do not use bullet points; use short paragraphs and labeled sections
@@ -129,6 +153,7 @@ Name: {complaint.complainant_name}
 Contact Number: {complaint.contact_number or 'Not provided'}
 Email: {complaint.email or 'Not provided'}
 ID Proof: {complaint.id_proof or 'Not provided'}
+ID Proof Number: {getattr(complaint, 'id_proof_number', 'Not provided') or 'Not provided'}
 
 INCIDENT DETAILS:
 Type of Offence: {complaint.incident_type}
@@ -159,8 +184,8 @@ Write the final FIR in a proper formal format as used by Indian police."""
             if generated_text:
                 return sanitize_generated_fir_text(generated_text)
 
-        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list))
+        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list, fir_record=fir_record, registration_datetime=registration_datetime))
 
     except Exception as e:
         logger.error(f"FIR Generation Error: {str(e)}", exc_info=True)
-        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list))
+        return sanitize_generated_fir_text(build_formal_fir_text(complaint, accused_list, fir_record=fir_record, registration_datetime=registration_datetime))
